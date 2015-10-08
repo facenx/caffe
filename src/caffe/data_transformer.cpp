@@ -1,5 +1,6 @@
 #ifdef USE_OPENCV
 #include <opencv2/core/core.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
 #endif  // USE_OPENCV
 
 #include <string>
@@ -141,6 +142,10 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
       cv_img = DecodeDatumToCVMat(datum, param_.force_color());
     } else {
       cv_img = DecodeDatumToCVMatNative(datum);
+    }
+    // force resizing
+    if (param_.force_new_height() && param_.force_new_width()) {
+       cv::resize(cv_img, cv_img, cv::Size(param_.force_new_width(), param_.force_new_height()));
     }
     // Transform the cv::image into blob.
     return Transform(cv_img, transformed_blob);
@@ -450,6 +455,10 @@ vector<int> DataTransformer<Dtype>::InferBlobShape(const Datum& datum) {
       cv_img = DecodeDatumToCVMat(datum, param_.force_color());
     } else {
       cv_img = DecodeDatumToCVMatNative(datum);
+    }
+    // force resizing
+    if (param_.force_new_height() && param_.force_new_width()) {
+       cv::resize(cv_img, cv_img, cv::Size(param_.force_new_width(), param_.force_new_height()));
     }
     // InferBlobShape using the cv::image.
     return InferBlobShape(cv_img);
