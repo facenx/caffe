@@ -344,6 +344,8 @@ template<typename Dtype>
 void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
                                        Blob<Dtype>* transformed_blob) {
   const int crop_size = param_.crop_size();
+  const int crop_h_off = param_.crop_h_off();
+  const int crop_w_off = param_.crop_w_off();
   const int input_num = input_blob->num();
   const int input_channels = input_blob->channels();
   const int input_height = input_blob->height();
@@ -370,7 +372,12 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
   CHECK_EQ(input_channels, channels);
   CHECK_GE(input_height, height);
   CHECK_GE(input_width, width);
-
+  CHECK((crop_h_off > -1) == (crop_h_off > -1)) << "Use or both values either noting";
+  if ( crop_h_off > -1 && crop_h_off > -1 ) {
+    CHECK(crop_size > 0) << "Specify crop size in case of using crop offsets";
+    CHECK_GE(height - crop_size , crop_h_off);
+    CHECK_GE(width - crop_size, crop_w_off);
+  }
 
   const Dtype scale = param_.scale();
   const bool do_mirror = param_.mirror() && Rand(2);
@@ -382,13 +389,19 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
   if (crop_size) {
     CHECK_EQ(crop_size, height);
     CHECK_EQ(crop_size, width);
-    // We only do random crop when we do training.
-    if (phase_ == TRAIN) {
-      h_off = Rand(input_height - crop_size + 1);
-      w_off = Rand(input_width - crop_size + 1);
-    } else {
-      h_off = (input_height - crop_size) / 2;
-      w_off = (input_width - crop_size) / 2;
+    if ( crop_h_off > -1 && crop_h_off > -1 ) {
+      h_off = crop_h_off;
+      w_off = crop_w_off;
+    }
+    else {
+      // We only do random crop when we do training.
+      if (phase_ == TRAIN) {
+        h_off = Rand(input_height - crop_size + 1);
+        w_off = Rand(input_width - crop_size + 1);
+      } else {
+        h_off = (input_height - crop_size) / 2;
+        w_off = (input_width - crop_size) / 2;
+      }
     }
   } else {
     CHECK_EQ(input_height, height);
