@@ -226,6 +226,8 @@ template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob) {
   const int crop_size = param_.crop_size();
+  const int crop_h_off = param_.crop_h_off();
+  const int crop_w_off = param_.crop_w_off();
   const int img_channels = cv_img.channels();
   const int img_height = cv_img.rows;
   const int img_width = cv_img.cols;
@@ -252,6 +254,13 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   CHECK_GE(img_height, crop_size);
   CHECK_GE(img_width, crop_size);
 
+  CHECK((crop_h_off > -1) == (crop_h_off > -1)) << "Use or both values either noting";
+  if ( crop_h_off > -1 && crop_h_off > -1 ) {
+    CHECK(crop_size > 0) << "Specify crop size in case of using crop offsets";
+    CHECK_GE(img_height - crop_size , crop_h_off);
+    CHECK_GE(img_width - crop_size, crop_w_off);
+  }
+
   Dtype* mean = NULL;
   if (has_mean_file) {
     CHECK_EQ(img_channels, data_mean_.channels());
@@ -276,13 +285,19 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   if (crop_size) {
     CHECK_EQ(crop_size, height);
     CHECK_EQ(crop_size, width);
-    // We only do random crop when we do training.
-    if (phase_ == TRAIN) {
-      h_off = Rand(img_height - crop_size + 1);
-      w_off = Rand(img_width - crop_size + 1);
-    } else {
-      h_off = (img_height - crop_size) / 2;
-      w_off = (img_width - crop_size) / 2;
+    if ( crop_h_off > -1 && crop_h_off > -1 ) {
+      h_off = crop_h_off;
+      w_off = crop_w_off;
+    }
+    else {
+      // We only do random crop when we do training.
+      if (phase_ == TRAIN) {
+        h_off = Rand(img_height - crop_size + 1);
+        w_off = Rand(img_width - crop_size + 1);
+      } else {
+        h_off = (img_height - crop_size) / 2;
+        w_off = (img_width - crop_size) / 2;
+      }
     }
     cv::Rect roi(w_off, h_off, crop_size, crop_size);
     cv_cropped_img = cv_img(roi);

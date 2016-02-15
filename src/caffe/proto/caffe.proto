@@ -417,6 +417,9 @@ message TransformationParameter {
   optional bool force_color = 6 [default = false];
   // Force the decoded image to have 1 color channels.
   optional bool force_gray = 7 [default = false];
+  // Specify offsets for crop
+  optional int32 crop_h_off = 8 [default = -1];
+  optional int32 crop_w_off = 9 [default = -1];
 }
 
 // Message that stores parameters shared by loss layers
