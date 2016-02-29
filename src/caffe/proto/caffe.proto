@@ -420,6 +420,9 @@ message TransformationParameter {
   // Force the decoded image to have new shape
   optional uint32 force_new_height = 8 [default = 0];
   optional uint32 force_new_width = 9 [default = 0];
+  // Specify offsets for crop
+  optional int32 crop_h_off = 10 [default = -1];
+  optional int32 crop_w_off = 11 [default = -1];
 }
 
 // Message that stores parameters shared by loss layers
