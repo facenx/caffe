@@ -49,7 +49,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
 
   const int crop_size = param_.crop_size();
   const Dtype scale = param_.scale();
-  const bool do_mirror = param_.mirror() && Rand(2);
+  const bool do_mirror = (phase_ == TRAIN) ? param_.mirror() && Rand(2) : param_.mirror();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_uint8 = data.size() > 0;
   const bool has_mean_values = mean_values_.size() > 0;
@@ -251,7 +251,7 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
   CHECK(cv_img.depth() == CV_8U) << "Image data type must be unsigned byte";
 
   const Dtype scale = param_.scale();
-  const bool do_mirror = param_.mirror() && Rand(2);
+  const bool do_mirror = (phase_ == TRAIN) ? param_.mirror() && Rand(2) : param_.mirror();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 
@@ -385,7 +385,7 @@ void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
   }
 
   const Dtype scale = param_.scale();
-  const bool do_mirror = param_.mirror() && Rand(2);
+  const bool do_mirror = (phase_ == TRAIN) ? param_.mirror() && Rand(2) : param_.mirror();
   const bool has_mean_file = param_.has_mean_file();
   const bool has_mean_values = mean_values_.size() > 0;
 
