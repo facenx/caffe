@@ -389,6 +389,7 @@ message LayerParameter {
   optional SigmoidParameter sigmoid_param = 124;
   optional SoftmaxParameter softmax_param = 125;
   optional SPPParameter spp_param = 132;
+  optional SReLUParameter srelu_param = 500;
   optional SliceParameter slice_param = 126;
   optional TanHParameter tanh_param = 127;
   optional ThresholdParameter threshold_param = 128;
@@ -1339,4 +1340,17 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope paramters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+
+message SReLUParameter {
+  // Initial value of threshold_right_i. Default is threshold_right_i=1. for all i. 
+  optional FillerParameter tr_filler = 1;
+  // Initial value of a_right_i. Default is a_right_i=1. for all i.
+  optional FillerParameter ar_filler = 2;
+  // Initial value of threshold_left_i. Default is threshold_left_i=0. for all i.
+  optional FillerParameter tl_filler = 3;
+  // Initial value of a_left_i. Default is threshold_left_i=0.25 for all i.
+  optional FillerParameter al_filler = 4;
+  // Whether or not paramters are shared across channels.
+  optional bool channel_shared = 5 [default = false];
 }

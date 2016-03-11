@@ -21,6 +21,7 @@
 #include "caffe/layers/sigmoid_layer.hpp"
 #include "caffe/layers/tanh_layer.hpp"
 #include "caffe/layers/threshold_layer.hpp"
+#include "caffe/layers/srelu_layer.hpp"
 
 #ifdef USE_CUDNN
 #include "caffe/layers/cudnn_relu_layer.hpp"
@@ -178,6 +179,32 @@ class NeuronLayerTest : public MultiDeviceTest<TypeParam> {
     GradientChecker<Dtype> checker(1e-2, 1e-2);
     checker.CheckGradientEltwise(&layer, blob_bottom_vec_, blob_top_vec_);
   }
+
+  void TestSReLU(SReLULayer<Dtype> *layer) {
+    layer->Forward(this->blob_bottom_vec_, this->blob_top_vec_);
+  // Now, check values
+    const Dtype* bottom_data = this->blob_bottom_->cpu_data();
+    const Dtype* top_data = this->blob_top_->cpu_data();
+    const Dtype* tr_data = layer->blobs()[0]->cpu_data();
+    const Dtype* ar_data = layer->blobs()[1]->cpu_data();
+    const Dtype* tl_data = layer->blobs()[2]->cpu_data();
+    const Dtype* al_data = layer->blobs()[3]->cpu_data();
+    int hw = this->blob_bottom_->height() * this->blob_bottom_->width();
+    int channels = this->blob_bottom_->channels();
+    bool channel_shared = layer->layer_param().srelu_param().channel_shared();
+    for (int i = 0; i < this->blob_bottom_->count(); ++i) {
+      int c = channel_shared ? 0 : (i / hw) % channels;
+      Dtype expected_top_value;
+      if ( bottom_data[i] >= tr_data[c] )
+        expected_top_value = tr_data[c] + ar_data[c]*(bottom_data[i]-tr_data[c]);
+      else if ( bottom_data[i] < tr_data[c] && bottom_data[i] > tl_data[c] )
+        expected_top_value = bottom_data[i];
+      else
+        expected_top_value = tl_data[c] + al_data[c]*(bottom_data[i]-tl_data[c]);
+      EXPECT_EQ(top_data[i], expected_top_value);
+    }
+  }
+
 };
 
 TYPED_TEST_CASE(NeuronLayerTest, TestDtypesAndDevices);
@@ -783,6 +810,41 @@ TYPED_TEST(NeuronLayerTest, TestPReLUInPlace) {
     EXPECT_EQ(prelu.blobs()[0]->cpu_diff()[s],
         prelu2.blobs()[0]->cpu_diff()[s]);
   }
+}
+
+TYPED_TEST(NeuronLayerTest, TestSReLUParam) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter layer_param;
+  SReLULayer<Dtype> layer(layer_param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  Dtype expected_values[] = {1., 1., 0., 0.25};
+  for ( int i = 0; i < 4; ++i ) {
+    const Dtype* parameters = layer.blobs()[i]->cpu_data();
+    int count = layer.blobs()[0]->count();
+    for (int j = 0; j < count; ++j, ++parameters) {
+      EXPECT_EQ(*parameters, expected_values[i]);
+    }
+  }
+}
+
+TYPED_TEST(NeuronLayerTest, TestSReLUForward) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter layer_param;
+  SReLULayer<Dtype> layer(layer_param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  FillerParameter filler_param;
+  GaussianFiller<Dtype> filler(filler_param);
+  filler.Fill(layer.blobs()[0].get());
+  this->TestSReLU(&layer);
+}
+
+TYPED_TEST(NeuronLayerTest, TestSReLUForwardChannelShared) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter layer_param;
+  layer_param.mutable_srelu_param()->set_channel_shared(true);
+  SReLULayer<Dtype> layer(layer_param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_);
+  this->TestSReLU(&layer);
 }
 
 #ifdef USE_CUDNN
