@@ -11,6 +11,7 @@ namespace caffe {
 template <typename Dtype>
 void SReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
     const vector<Blob<Dtype>*>& top) {
+
   CHECK_GE(bottom[0]->num_axes(), 2)
       << "Number of axes of bottom blob must be >=2.";
   SReLUParameter srelu_param = this->layer_param().srelu_param();
@@ -84,9 +85,9 @@ void SReLULayer<Dtype>::LayerSetUp(const vector<Blob<Dtype>*>& bottom,
 
   // Propagate gradients to the parameters (as directed by backward pass).
   this->param_propagate_down_.resize(this->blobs_.size(), true);
-//  multiplier_.Reshape(vector<int>(1, bottom[0]->count(1)));
-//  backward_buff_.Reshape(vector<int>(1, bottom[0]->count(1)));
-//  caffe_set(multiplier_.count(), Dtype(1), multiplier_.mutable_cpu_data());
+  this->multiplier_.Reshape(vector<int>(1, bottom[0]->count(1)));
+  this->backward_buff_.Reshape(vector<int>(1, bottom[0]->count(1)));
+  caffe_set(multiplier_.count(), Dtype(1.), multiplier_.mutable_cpu_data());
 }
 
 template <typename Dtype>

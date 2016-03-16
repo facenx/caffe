@@ -1,6 +1,11 @@
 #ifndef CAFFE_SRELU_LAYER_HPP_
 #define CAFFE_SRELU_LAYER_HPP_
 
+// ================ TODO =======================
+// 1. Fix TestSReLUGradient
+// 2. Add backprop tests
+// 3. Fix documentation
+
 #include <vector>
 
 #include "caffe/blob.hpp"
@@ -54,8 +59,8 @@ class SReLULayer : public NeuronLayer<Dtype> {
    */
   virtual void Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
-//  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
-//      const vector<Blob<Dtype>*>& top);
+  virtual void Forward_gpu(const vector<Blob<Dtype>*>& bottom,
+      const vector<Blob<Dtype>*>& top);
 
   /** !!!
    * @brief Computes the error gradient w.r.t. the PReLU inputs.
@@ -87,12 +92,12 @@ class SReLULayer : public NeuronLayer<Dtype> {
    */
   virtual void Backward_cpu(const vector<Blob<Dtype>*>& top,
       const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
-//  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
-//      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
+  virtual void Backward_gpu(const vector<Blob<Dtype>*>& top,
+      const vector<bool>& propagate_down, const vector<Blob<Dtype>*>& bottom);
 
   bool channel_shared_;
-//  Blob<Dtype> multiplier_;  // dot multiplier for backward computation of params
-//  Blob<Dtype> backward_buff_;  // temporary buffer for backward computation
+  Blob<Dtype> multiplier_;  // dot multiplier for backward computation of params
+  Blob<Dtype> backward_buff_;  // temporary buffer for backward computation
   Blob<Dtype> bottom_memory_;  // memory for in-place computation
 };
 
