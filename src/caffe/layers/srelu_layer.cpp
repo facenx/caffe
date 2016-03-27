@@ -208,7 +208,7 @@ void SReLULayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 }
 
 #ifdef CPU_ONLY
-STUB_GPU(PReLULayer);
+STUB_GPU(SReLULayer);
 #endif
 
 INSTANTIATE_CLASS(SReLULayer);

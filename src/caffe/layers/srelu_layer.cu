@@ -42,8 +42,8 @@ __global__ void SReLUBackward(const int n, const int channels, const int dim,
 
 // CUDA kernel for element-wise parameter backward
 template <typename Dtype>
-__global__ void SReLU_Backward(const int n,
-    const int rows, const int rowPitch,
+__global__ void SReLUParamsBackward(const int n,
+    const int rows, const int dim, const int rowPitch,
     const Dtype* in_diff, const Dtype* in_data, 
     const Dtype* tr_data, const Dtype* ar_data, const Dtype* tl_data, const Dtype* al_data,
     Dtype* out_diff,
@@ -51,37 +51,37 @@ __global__ void SReLU_Backward(const int n,
   switch (param_num) {
     case 0:
       CUDA_KERNEL_LOOP(index, n) {
-        out_diff[index] = in_diff[index] * (1 - ar_data[index]) * (in_data[index] >= tr_data[index]);
+        out_diff[index] = in_diff[index] * (1 - ar_data[index/dim]) * (in_data[index] >= tr_data[index/dim]);
         for ( int k = 1; k < rows; k++ ) {
             out_diff[index] += in_diff[index + k*rowPitch]
-               * (1 - ar_data[index]) * (in_data[index + k*rowPitch] >= tr_data[index]);
+               * (1 - ar_data[index/dim]) * (in_data[index + k*rowPitch] >= tr_data[index/dim]);
         }
       }
       break;
     case 1:
       CUDA_KERNEL_LOOP(index, n) {
-        out_diff[index] = in_diff[index] * (in_data[index] - tr_data[index]) * (in_data[index] >= tr_data[index]);
+        out_diff[index] = in_diff[index] * (in_data[index] - tr_data[index/dim]) * (in_data[index] >= tr_data[index/dim]);
         for ( int k = 1; k < rows; k++ ) {
             out_diff[index] += in_diff[index + k*rowPitch]
-               * (in_data[index + k*rowPitch] - tr_data[index]) * (in_data[index + k*rowPitch] >= tr_data[index]);
+               * (in_data[index + k*rowPitch] - tr_data[index/dim]) * (in_data[index + k*rowPitch] >= tr_data[index/dim]);
         }
       }
       break;
     case 2:
       CUDA_KERNEL_LOOP(index, n) {
-        out_diff[index] = in_diff[index] * (1 - al_data[index]) * (in_data[index] <= tl_data[index]);
+        out_diff[index] = in_diff[index] * (1 - al_data[index/dim]) * (in_data[index] <= tl_data[index/dim]);
         for ( int k = 1; k < rows; k++ ) {
             out_diff[index] += in_diff[index + k*rowPitch]
-               * (1 - al_data[index]) * (in_data[index + k*rowPitch] <= tl_data[index]);
+               * (1 - al_data[index/dim]) * (in_data[index + k*rowPitch] <= tl_data[index/dim]);
         }
       }
       break;
-    case 3:
-      CUDA_KERNEL_LOOP(index, n) {
-        out_diff[index] = in_diff[index] * (in_data[index] - tl_data[index]) * (in_data[index] >= tl_data[index]);
+    case 3:            
+      CUDA_KERNEL_LOOP(index, n) {        
+        out_diff[index] = in_diff[index] * (in_data[index] - tl_data[index/dim]) * (in_data[index] <= tl_data[index/dim]);
         for ( int k = 1; k < rows; k++ ) {
             out_diff[index] += in_diff[index + k*rowPitch]
-               * (in_data[index + k*rowPitch] - tl_data[index]) * (in_data[index + k*rowPitch] >= tl_data[index]);
+               * (in_data[index + k*rowPitch] - tl_data[index/dim]) * (in_data[index + k*rowPitch] <= tl_data[index/dim]);                
         }
       }
       break;
@@ -128,7 +128,8 @@ void SReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   const Dtype* tl_data = this->blobs_[2]->gpu_data();
   const Dtype* al_data = this->blobs_[3]->gpu_data();
   const int count = bottom[0]->count();
-  const int dim = bottom[0]->count(2);
+  const int cdim = bottom[0]->count(1);
+  const int dim = bottom[0]->count(2);      
   const int channels = bottom[0]->channels();
 
   // For in-place computation
@@ -139,20 +140,19 @@ void SReLULayer<Dtype>::Backward_gpu(const vector<Blob<Dtype>*>& top,
   // Propagate to param
   // Since to write bottom diff will affect top diff if top and bottom blobs
   // are identical (in-place computaion), we first compute param backward to
-  // keep top_diff unchanged.  
-  for (int param_num = 0; param_num < 4; ++param_num) {
+  // keep top_diff unchanged.    
+  for (int param_num = 0; param_num < 4; ++param_num) {    
     if (this->param_propagate_down_[param_num]) {
-      Dtype* param_diff = this->blobs_[param_num]->mutable_gpu_diff();    
-      int cdim = channels * dim;
+      Dtype* param_diff = this->blobs_[param_num]->mutable_gpu_diff();          
       // compute element-wise diff
       // NOLINT_NEXT_LINE(whitespace/operators)
-      SReLU_Backward<Dtype><<<CAFFE_GET_BLOCKS(cdim),
+      SReLUParamsBackward<Dtype><<<CAFFE_GET_BLOCKS(cdim),
         CAFFE_CUDA_NUM_THREADS>>>(
-        cdim, bottom[0]->num(), top[0]->offset(1),
+        cdim, bottom[0]->num(), dim, top[0]->offset(1),
         top_diff, bottom_data,
         tr_data, ar_data, tl_data, al_data,
         backward_buff_.mutable_gpu_diff(),
-        param_num);
+        param_num);      
       CUDA_POST_KERNEL_CHECK;
       if (channel_shared_) {
         Dtype dsum;
