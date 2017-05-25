@@ -10,23 +10,24 @@
 namespace caffe {
 
 /**
- * @brief Also known as a "fully-connected" layer, computes an inner product
- *        with a set of learned weights, and (optionally) adds biases.
+ * @brief Use L1 or L2 distance to replace the dot product in InnerProduct
+ * layer.
  *
  * TODO(dox): thorough documentation for Forward, Backward, and proto params.
  */
 template <typename Dtype>
-class InnerProductLayer : public Layer<Dtype> {
+class InnerDistanceLayer : public Layer<Dtype> {
  public:
-  explicit InnerProductLayer(const LayerParameter& param)
+  explicit InnerDistanceLayer(const LayerParameter& param)
       : Layer<Dtype>(param) {}
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
 
-  virtual inline const char* type() const { return "InnerProduct"; }
-  virtual inline int MinBottomBlobs() const { return 1; }
+  virtual inline const char* type() const { return "InnerDistance"; }
+  virtual inline int MinNumBottomBlobs() const { return 1; }
+  virtual inline int MaxNumBottomBlobs() const { return 3; }
   virtual inline int ExactNumTopBlobs() const { return 1; }
 
  protected:
@@ -42,13 +43,13 @@ class InnerProductLayer : public Layer<Dtype> {
   int M_;
   int K_;
   int N_;
-  bool bias_term_;
-  Blob<Dtype> bias_multiplier_;
   bool transpose_;  ///< if true, assume transposed weights
+  std::string distance_type_;
   bool normalize_;
   Blob<Dtype> weight_norm_;
+  bool update_center_only_;
 };
 
 }  // namespace caffe
 
-#endif  // CAFFE_INNER_PRODUCT_LAYER_HPP_
+#endif  // CAFFE_INNER_DISTANCE_LAYER_HPP_

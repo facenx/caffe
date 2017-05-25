@@ -405,6 +405,10 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional InnerDistanceParameter inner_distance_param = 213;
+  optional NormalizeParameter normalize_param = 214;
+  optional GeneralContrastiveParameter general_contrastive_loss_param = 215;
+  optional FlipParameter flip_param = 212;
 }
 
 // Message that stores parameters used to apply transformation
@@ -483,6 +487,8 @@ message AccuracyParameter {
 
   // If specified, ignore instances with the given label.
   optional int32 ignore_label = 3;
+
+  optional bool min_is_better = 4 [default = false];
 }
 
 message ArgMaxParameter {
@@ -838,6 +844,7 @@ message InnerProductParameter {
   // of the weight matrix. The weight matrix itself is not going to be transposed
   // but rather the transfer flag of operations will be toggled accordingly.
   optional bool transpose = 6 [default = false];
+  optional bool normalize = 7 [default = false];
 }
 
 message InputParameter {
@@ -897,6 +904,7 @@ message MVNParameter {
 
 message ParameterParameter {
   optional BlobShape shape = 1;
+  optional FillerParameter blob_filler = 2;
 }
 
 message PoolingParameter {
@@ -1416,4 +1424,51 @@ message PReLUParameter {
   optional FillerParameter filler = 1;
   // Whether or not slope parameters are shared across channels.
   optional bool channel_shared = 2 [default = false];
+}
+
+message InnerDistanceParameter {
+  optional uint32 num_output = 1; // The number of outputs for the layer
+  optional bool bias_term = 2 [default = true]; // whether to have bias terms
+  optional FillerParameter weight_filler = 3; // The filler for the weight
+  optional FillerParameter bias_filler = 4; // The filler for the bias
+
+  // The first axis to be lumped into a single inner product computation;
+  // all preceding axes are retained in the output.
+  // May be negative to index from the end (e.g., -1 for the last axis).
+  optional int32 axis = 5 [default = 1];
+  // Specify whether to transpose the weight matrix or not.
+  // If transpose == true, any operations will be performed on the transpose
+  // of the weight matrix. The weight matrix itself is not going to be transposed
+  // but rather the transfer flag of operations will be toggled accordingly.
+  optional bool transpose = 6 [default = false];
+  optional string distance_type = 7 [default = "L2"];
+  optional bool normalize = 8 [default = false];
+  optional bool update_center_only = 9 [default = false];
+}
+
+message NormalizeParameter {
+  optional string normalize_type = 1 [default = "L2"];
+  optional bool rescale = 2 [default = false];
+}
+
+message GeneralContrastiveParameter {
+  optional float positive_margin = 1 [default = 0.0];
+  optional float negative_margin = 2 [default = 1.0];
+  optional float positive_weight = 3 [default = 1.0];
+  optional float negative_weight = 4 [default = 1.0];
+  optional float normalize_negative = 5 [default = 0.0];
+  optional float positive_outlier_thresh = 6 [default = 4.0];
+  optional bool square = 7 [default = false];
+  optional bool max_negative_only = 8 [default = false];
+  optional bool max_positive_only = 9 [default = false];
+  optional bool positive_first = 10 [default = false];
+  optional float positive_upper_bound = 11 [default = 1.0];
+  optional bool exp_negative_weight = 12 [default = false];
+  optional bool add_intra_mae = 13 [default = false];
+  optional float max_negative_margin = 14 [default = 1.2];
+}
+
+message FlipParameter {
+  optional bool flip_width = 1 [default = true];
+  optional bool flip_height = 2 [default = false];
 }

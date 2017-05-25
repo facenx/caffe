@@ -6,6 +6,8 @@ if(POLICY CMP0054)
   cmake_policy(SET CMP0054 NEW)
 endif()
 
+add_definitions(-std=c++11)
+
 # ---[ Caffe project
 project(Caffe C CXX)
 
