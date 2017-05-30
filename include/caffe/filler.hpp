@@ -261,6 +261,47 @@ class BilinearFiller : public Filler<Dtype> {
   }
 };
 
+template <typename Dtype>
+class IdentityFiller : public Filler<Dtype> {
+  public:
+    explicit IdentityFiller(const FillerParameter& param)
+        : Filler<Dtype>(param) {}
+    virtual void Fill(Blob<Dtype>* blob) {
+        CHECK(blob->count());
+        int fan_in = blob->count() / blob->num();
+        int fan_out = blob->count() / blob->channels();
+        CHECK_EQ(fan_in, fan_out);
+        Dtype* blob_data = blob->mutable_cpu_data();
+        caffe_set(blob->count(), Dtype(0), blob_data);
+        for (int i = 0; i < blob->num(); i++) {
+            blob_data[i * blob->channels() + i] = Dtype(1);
+        }
+        CHECK_EQ(this->filler_param_.sparse(), -1)
+            << "Sparsity not supported by this Filler.";
+    }
+};
+
+template <typename Dtype>
+class GaussianUnitBallFiller : public Filler<Dtype> {
+  public:
+    explicit GaussianUnitBallFiller(const FillerParameter& param)
+        : Filler<Dtype>(param) {}
+    virtual void Fill(Blob<Dtype>* blob) {
+        CHECK(blob->count());
+        int fan_in = blob->count() / blob->num();
+        int n = fan_in;  // default to fan_in
+        caffe_rng_gaussian<Dtype>(blob->count(), Dtype(0), 1,
+                                  blob->mutable_cpu_data());
+        Dtype sum_sq;
+        for (int i = 0; i < blob->num(); i++) {
+            sum_sq = caffe_cpu_dot(n, blob->cpu_data() + i * n, blob->cpu_data() + i * n) + 1e-12;
+            caffe_cpu_scale<Dtype>(n, Dtype(1.0) / sqrt(sum_sq), blob->cpu_data() + i * n, blob->mutable_cpu_data() + i * n);
+        }
+        CHECK_EQ(this->filler_param_.sparse(), -1)
+            << "Sparsity not supported by this Filler.";
+    }
+};
+
 /**
  * @brief Get a specific filler from the specification given in FillerParameter.
  *
@@ -284,6 +325,10 @@ Filler<Dtype>* GetFiller(const FillerParameter& param) {
     return new MSRAFiller<Dtype>(param);
   } else if (type == "bilinear") {
     return new BilinearFiller<Dtype>(param);
+  } else if (type == "identity") {
+      return new IdentityFiller<Dtype>(param);
+  } else if (type == "gaussian_unitball") {
+      return new GaussianUnitBallFiller<Dtype>(param);
   } else {
     CHECK(false) << "Unknown filler name: " << param.type();
   }
